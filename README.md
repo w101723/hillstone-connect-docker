@@ -8,8 +8,8 @@
 - TigerVNC + flwm 最小桌面
 - noVNC 浏览器访问
 - Supervisor 管理后台服务和 GUI
-- VPN 连接后自动开放 SOCKS5
-- VPN 断开后自动关闭 SOCKS5 出站
+- SOCKS5 服务始终保持监听
+- VPN 未连接时阻止 SOCKS5 出站，连接后仅允许通过 VPN 接口出站
 - 配置和应用数据使用相对路径持久化
 
 ## 支持的客户端版本
@@ -167,7 +167,7 @@ HILLSTONE_AUTO_MINIMIZE=false
 
 ## 使用 SOCKS5
 
-SOCKS5 仅在检测到有效 VPN 接口后开始监听。
+SOCKS5 服务始终监听配置的端口。VPN 未连接时，客户端可以建立 SOCKS5 连接，但代理到目标地址的请求会被 fail-closed 规则拒绝；VPN 接口建立后，代理出站会切换到该接口。
 
 代理地址：
 
@@ -196,7 +196,7 @@ ssh -o 'ProxyCommand=nc -X 5 -x 192.168.1.10:1080 %h %p' \
   user@internal-host
 ```
 
-VPN 未连接或已经断开时，SOCKS 请求应失败。
+VPN 未连接或已经断开时，SOCKS5 端口仍然可连接，但访问目标地址的代理请求应失败。
 
 ## 查看运行状态
 

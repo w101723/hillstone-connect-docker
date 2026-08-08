@@ -63,6 +63,7 @@ while true; do
         else
           echo "Failed to restart SOCKS; keeping egress locked" >&2
           apply_locked_rules
+          supervisorctl restart socks >/dev/null 2>&1 || true
           last_iface=
         fi
       else
@@ -72,8 +73,8 @@ while true; do
     fi
   elif [[ -n "$last_iface" ]] || [[ -s /run/hillstone-vpn/interface ]]; then
     apply_locked_rules
-    supervisorctl stop socks >/dev/null 2>&1 || true
     rm -f /run/hillstone-vpn/interface
+    supervisorctl restart socks >/dev/null 2>&1 || true
     last_iface=
     echo "VPN guard locked SOCKS egress"
   fi
