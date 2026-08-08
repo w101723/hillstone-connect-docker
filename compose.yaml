@@ -12,6 +12,8 @@ services:
       - SETGID
       - CHOWN
       - DAC_OVERRIDE
+    sysctls:
+      net.ipv4.ip_forward: "1"
     devices:
       - /dev/net/tun:/dev/net/tun
     environment:
@@ -21,9 +23,6 @@ services:
       LC_ALL: zh_CN.UTF-8
       VNC_GEOMETRY: ${VNC_GEOMETRY:-1440x900}
       VNC_DEPTH: ${VNC_DEPTH:-24}
-      VPN_TUN_REGEX: ${VPN_TUN_REGEX:-^(tun|tap|ppp|hsc|sc)[0-9_-]*$}
-      VPN_PROBE_HOST: ${VPN_PROBE_HOST:-}
-      SOCKS_ALLOWED_CIDRS: ${SOCKS_ALLOWED_CIDRS:-192.168.0.0/16}
       HILLSTONE_SERVICE_COMMAND: ${HILLSTONE_SERVICE_COMMAND:-/opt/apps/hillstonesecureconnect/files/bin/HillstoneSecureConnectService}
       HILLSTONE_GUI_COMMAND: ${HILLSTONE_GUI_COMMAND:-/opt/apps/hillstonesecureconnect/files/bin/HillstoneSecureConnect.sh}
       HILLSTONE_AUTO_MINIMIZE: ${HILLSTONE_AUTO_MINIMIZE:-false}

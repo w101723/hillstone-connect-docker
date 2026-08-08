@@ -26,4 +26,14 @@ The packages declare no Debian runtime dependencies. The image therefore install
 - A container created without `/dev/net/tun` failed at virtual-interface setup with `VNIC_ERR_IP_SET_FAILED (41021)`, `Failed to open device /dev/net/tun`, and `Failed to set vnic ip: No such device`.
 - The client invokes compatibility commands including `ifconfig`, `route`, `ip`, `sudo`, `dnsmasq`, and `sysctl`; the Bookworm image installs their required packages.
 
-Full release validation still requires running the final image with `/dev/net/tun`, `NET_ADMIN`, and `NET_RAW`, completing login on each native architecture, and verifying tunnel routes, DNS, SOCKS egress and disconnect leak protection.
+## Proxy runtime
+
+- GOST is fixed at version `3.2.6` and installed from official architecture-specific release archives.
+- amd64 archive SHA-256: `b39037b0380ea001fb3c0c28441c2e10bfc694f90682739a65b53e55dce5238b`.
+- arm64 archive SHA-256: `f674c8f4a033dc1dfd4f0d5e9602fbe5b0d0f81307bf3794f44b5b5d6d622eae`.
+- GOST runs as root (the container default user) and listens continuously on TCP port 1080.
+- GOST has no owner-based or VPN-interface firewall restriction. Its outbound connections follow the container routing table before, during and after VPN connectivity.
+- Compose enables `net.ipv4.ip_forward=1`. Container startup sets the INPUT, FORWARD and OUTPUT policies to `ACCEPT` and idempotently installs the broad `iptables -t nat -A POSTROUTING -j MASQUERADE` rule for routed IPv4 traffic.
+- Forwarded/NAT traffic is separate from GOST's locally generated OUTPUT traffic. Split-tunnel and full-tunnel behavior must be determined from the routes installed by Hillstone.
+
+Full release validation still requires running the final image with `/dev/net/tun`, `NET_ADMIN`, `NET_RAW`, and the IPv4 forwarding sysctl, completing login on each native architecture, and verifying tunnel routes, DNS, pre-VPN and post-VPN GOST egress, downstream forwarding/NAT and performance.

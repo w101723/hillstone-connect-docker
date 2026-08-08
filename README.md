@@ -8,8 +8,9 @@
 - TigerVNC + flwm 最小桌面
 - noVNC 浏览器访问
 - Supervisor 管理后台服务和 GUI
-- SOCKS5 服务始终保持监听
-- VPN 未连接时阻止 SOCKS5 出站，连接后仅允许通过 VPN 接口出站
+- GOST SOCKS5 服务始终保持监听并以容器默认用户运行
+- SOCKS5 出站直接服从容器路由表，不进行用户或 VPN 接口防火墙限制
+- 默认启用 IPv4 转发，并对容器转发流量执行 `POSTROUTING MASQUERADE`
 - 配置和应用数据使用相对路径持久化
 
 ## 支持的客户端版本
@@ -47,9 +48,14 @@ cap_add:
   - NET_ADMIN
   - NET_RAW
 
+sysctls:
+  net.ipv4.ip_forward: "1"
+
 devices:
   - /dev/net/tun:/dev/net/tun
 ```
+
+`NET_ADMIN` 用于建立 VPN 接口、配置 iptables 和转发规则。Compose 默认启用容器网络命名空间的 IPv4 forwarding；直接使用 `docker run` 时需要同时传入 `--cap-add NET_ADMIN --sysctl net.ipv4.ip_forward=1`。
 
 不需要使用 `privileged: true` 或 host network。
 
@@ -61,7 +67,7 @@ devices:
 cp .env.example .env
 ```
 
-编辑 `.env`，至少设置宿主机绑定地址和允许访问 SOCKS 的来源网络：
+编辑 `.env`，至少设置宿主机绑定地址：
 
 ```dotenv
 HILLSTONE_IMAGE=ghcr.io/w101723/hillstone-connect:latest
@@ -72,11 +78,9 @@ NOVNC_HTTP_PORT=6080
 
 SOCKS_BIND_IP=192.168.1.10
 SOCKS_PORT=1080
-SOCKS_ALLOWED_CIDRS=192.168.1.0/24
 
 VPN_DOCKER_SUBNET=172.30.50.0/24
 VPN_CONTAINER_IP=172.30.50.2
-VPN_TUN_REGEX=^(tun|tap|ppp|hsc|sc)[0-9_-]*$
 
 HILLSTONE_AUTO_MINIMIZE=false
 ```
@@ -90,11 +94,8 @@ HILLSTONE_AUTO_MINIMIZE=false
 | `NOVNC_HTTP_PORT` | noVNC HTTP 端口 |
 | `SOCKS_BIND_IP` | SOCKS5 在宿主机上的绑定地址 |
 | `SOCKS_PORT` | SOCKS5 端口 |
-| `SOCKS_ALLOWED_CIDRS` | 允许连接 SOCKS5 的 IPv4 CIDR，多个值用逗号分隔 |
 | `VPN_DOCKER_SUBNET` | Compose bridge 网络段 |
 | `VPN_CONTAINER_IP` | 容器固定地址 |
-| `VPN_TUN_REGEX` | VPN 接口名称匹配规则 |
-| `VPN_PROBE_HOST` | 可选，仅通过 VPN 可达的探测地址 |
 | `HILLSTONE_AUTO_MINIMIZE` | 是否在连接后自动最小化 GUI，noVNC 环境建议设为 `false` |
 
 不要将服务绑定到不受信任的公网地址。
@@ -167,7 +168,11 @@ HILLSTONE_AUTO_MINIMIZE=false
 
 ## 使用 SOCKS5
 
-SOCKS5 服务始终监听配置的端口。VPN 未连接时，客户端可以建立 SOCKS5 连接，但代理到目标地址的请求会被 fail-closed 规则拒绝；VPN 接口建立后，代理出站会切换到该接口。
+SOCKS5 由 GOST 提供并始终监听配置的端口。GOST 以容器默认用户 root 运行，不再通过 owner 规则或 VPN 接口名称限制出站。VPN 连接前、连接后以及断开后，代理请求都直接服从容器当时的路由表。
+
+VPN 连接后，Hillstone 下发的目标路由会自动用于相应的 SOCKS 请求。全隧道 VPN 可能改变默认出口；分流 VPN 只会让指定网段经过 VPN，其余目标仍可能通过 `eth0`。是否经过 VPN 应以 `ip route get <目标地址>` 和实际出口测试为准。
+
+SOCKS5 不启用账号密码或来源 CIDR 限制，所有能够访问绑定地址和端口的客户端均可连接。仅应将 `SOCKS_BIND_IP` 绑定到受信内网地址，并使用宿主机防火墙控制访问范围。
 
 代理地址：
 
@@ -196,7 +201,23 @@ ssh -o 'ProxyCommand=nc -X 5 -x 192.168.1.10:1080 %h %p' \
   user@internal-host
 ```
 
-VPN 未连接或已经断开时，SOCKS5 端口仍然可连接，但访问目标地址的代理请求应失败。
+VPN 未连接或已经断开时，SOCKS5 仍会通过容器普通默认路由访问目标，不具备 VPN kill switch 或 fail-closed 保护。
+
+## 作为转发网关
+
+容器启动时默认执行以下等效配置：
+
+```bash
+sysctl -w net.ipv4.ip_forward=1
+iptables -P INPUT ACCEPT
+iptables -P FORWARD ACCEPT
+iptables -P OUTPUT ACCEPT
+iptables -t nat -A POSTROUTING -j MASQUERADE
+```
+
+因此，连接到容器网络并将默认路由指向该容器的下游设备或容器，可以使用它转发 IPv4 流量。无条件 `MASQUERADE` 会对容器转发的所有 IPv4 出站流量进行源地址伪装，实际出口由容器当前路由表决定。
+
+通用转发/NAT 与 GOST SOCKS5 相互独立：MASQUERADE 作用于经容器转发的流量；GOST 发起的是本机 `OUTPUT` 流量，直接按照容器路由表选路。容器不再创建 GOST 专用防火墙链，也不会将 SOCKS5 端口变成透明代理。
 
 ## 查看运行状态
 
@@ -220,7 +241,6 @@ dbus
 desktop
 hillstone-service
 novnc
-route-guard
 socks
 ```
 
@@ -239,7 +259,7 @@ docker compose exec hillstone-vpn bash -lc '
 ```bash
 docker compose exec hillstone-vpn ip -br address
 docker compose exec hillstone-vpn ip route show table all
-docker compose exec hillstone-vpn cat /run/hillstone-vpn/interface
+docker compose exec hillstone-vpn ip route get <目标地址>
 ```
 
 ### SOCKS 监听状态
@@ -248,11 +268,14 @@ docker compose exec hillstone-vpn cat /run/hillstone-vpn/interface
 docker compose exec hillstone-vpn ss -lntp | grep :1080
 ```
 
-### nftables 规则
+### iptables 和转发状态
 
 ```bash
-docker compose exec hillstone-vpn \
-  nft list table inet hillstone_guard
+docker compose exec hillstone-vpn sysctl net.ipv4.ip_forward
+docker compose exec hillstone-vpn iptables -S
+docker compose exec hillstone-vpn iptables -L FORWARD -n -v
+docker compose exec hillstone-vpn iptables -t nat -S POSTROUTING
+docker compose exec hillstone-vpn iptables -t nat -L POSTROUTING -n -v
 ```
 
 ### GUI 窗口
@@ -327,8 +350,9 @@ docker compose up -d
 ## 安全建议
 
 - 不要将 HTTP noVNC 或 SOCKS5 直接暴露到互联网；
-- 使用防火墙限制 noVNC 和 SOCKS5 来源地址；
-- 将 `SOCKS_ALLOWED_CIDRS` 限制到实际客户端网络；
+- 使用宿主机防火墙限制 noVNC 和 SOCKS5 来源地址；
 - 妥善保护 `AppConfig.ini`；
 - 不要将 `.env` 或 `data/` 提交到 Git；
+- 容器内不提供 SOCKS5 的 VPN kill switch 或出站接口限制，VPN 断开后代理会继续服从普通路由；
+- 默认的无条件 MASQUERADE 会伪装所有经容器转发的 IPv4 出站流量，应只把受信网络接入该网关；
 - SOCKS5 只提供 TCP CONNECT，不支持 UDP ASSOCIATE、ICMP 或透明三层路由。

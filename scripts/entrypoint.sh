@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-install -d /run/dbus /run/hillstone-vpn /run/danted /home/desktop/.vnc /home/desktop/Desktop
+install -d /run/dbus /run/hillstone-vpn /home/desktop/.vnc /home/desktop/Desktop
 install -d -m 1777 /tmp/.X11-unix
 install -d -m 0700 -o desktop -g desktop /run/user/$(id -u desktop)
 chown -R desktop:desktop /home/desktop/.vnc /home/desktop/.config
-chown socksproxy:socksproxy /run/danted
 
 if [[ ! -c /dev/net/tun ]]; then
   echo "ERROR: /dev/net/tun is unavailable" >&2
@@ -23,5 +22,7 @@ if [[ ! -x "${HILLSTONE_HOME}/bin/HillstoneSecureConnect" ]] ||
   echo "ERROR: Hillstone client is missing from the built image" >&2
   exit 1
 fi
+
+/usr/local/bin/init-forwarding.sh
 
 exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
