@@ -7,24 +7,22 @@ ENV TZ=Asia/Shanghai \
     DISPLAY=:1 \
     VNC_GEOMETRY=1440x900 \
     VNC_DEPTH=24 \
-    NOVNC_PORT=6080 \
-    SOCKS_PORT=1080 \
     HILLSTONE_HOME=/opt/apps/hillstonesecureconnect/files \
     LANG=zh_CN.UTF-8 \
     LANGUAGE=zh_CN:zh \
     LC_ALL=zh_CN.UTF-8
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      ca-certificates curl dbus dbus-x11 dante-server dnsmasq-base file flwm \
+      ca-certificates curl dbus dbus-x11 dante-server dnsmasq-base flwm \
       fonts-wqy-microhei fonts-wqy-zenhei iproute2 iputils-ping jq libasound2 \
       libegl1 libfontconfig1 libgl1 libglib2.0-0 libgtk2.0-0 libnss3 \
       libpam0g libpcre2-16-0 libpolkit-agent-1-0 libx11-6 libx11-xcb1 \
       libxcb-icccm4 libxcb-image0 libxcb-keysyms1 libxcb-randr0 \
       libxcb-render-util0 libxcb-shape0 libxcb-shm0 libxcb-xinerama0 \
       libxcb-xkb1 libxcb1 libxext6 libxi6 libxkbcommon-x11-0 libxrender1 \
-      libxss1 libxtst6 locales net-tools nftables nginx novnc openssl \
+      libxss1 libxtst6 locales net-tools nftables novnc \
       policykit-1 procps psmisc sudo supervisor tigervnc-standalone-server \
-      tigervnc-tools tini unzip websockify x11-utils xdg-utils xterm && \
+      tigervnc-tools tini websockify x11-utils xdg-utils xterm && \
     sed -i 's/^# *\(zh_CN.UTF-8 UTF-8\)/\1/' /etc/locale.gen && \
     locale-gen zh_CN.UTF-8 && \
     rm -rf /var/lib/apt/lists/*
@@ -53,11 +51,10 @@ RUN case "$TARGETARCH" in \
 
 COPY config/supervisord.conf /etc/supervisor/conf.d/hillstone.conf
 COPY config/danted.conf.template /etc/danted.conf.template
-COPY nginx/default.conf.template /etc/nginx/templates/default.conf.template
 COPY scripts/ /usr/local/bin/
 RUN chmod 0755 /usr/local/bin/*.sh
 
-EXPOSE 6080 8443 1080
+EXPOSE 6080 1080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
   CMD ["/usr/local/bin/healthcheck.sh"]
 

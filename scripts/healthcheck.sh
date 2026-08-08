@@ -2,9 +2,8 @@
 set -euo pipefail
 
 curl -fsS http://127.0.0.1:6080/vnc.html >/dev/null
-curl -kfsS https://127.0.0.1:8443/healthz >/dev/null
 
-for program in dbus hillstone-service desktop novnc nginx route-guard; do
+for program in dbus hillstone-service desktop novnc route-guard; do
   supervisorctl status "$program" | grep -q 'RUNNING'
 done
 

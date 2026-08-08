@@ -12,13 +12,6 @@ if [[ ! -c /dev/net/tun ]]; then
   exit 1
 fi
 
-for file in /certs/tls.crt /certs/tls.key /certs/htpasswd; do
-  if [[ ! -s "$file" ]]; then
-    echo "ERROR: missing $file" >&2
-    exit 1
-  fi
-done
-
 if [[ "${LANG:-}" != "zh_CN.UTF-8" ]] || ! locale -a | grep -qi '^zh_CN\.utf8$'; then
   echo "ERROR: zh_CN.UTF-8 locale is unavailable" >&2
   exit 1
@@ -30,8 +23,5 @@ if [[ ! -x "${HILLSTONE_HOME}/bin/HillstoneSecureConnect" ]] ||
   echo "ERROR: Hillstone client is missing from the built image" >&2
   exit 1
 fi
-
-rm -f /etc/nginx/sites-enabled/default
-cp /etc/nginx/templates/default.conf.template /etc/nginx/conf.d/default.conf
 
 exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf

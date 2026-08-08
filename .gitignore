@@ -1,8 +1,6 @@
 .env
 .DS_Store
 hillstone-remote-*.png
-certs/*
-!certs/README.md
 data/
 *.log
 vendor/*

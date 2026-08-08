@@ -1,6 +1,6 @@
 services:
   hillstone-vpn:
-    image: ${HILLSTONE_IMAGE:-hillstonenet-hillstone-vpn:bookworm}
+    image: ${HILLSTONE_IMAGE:-ghcr.io/w101723/hillstone-connect:latest}
     build:
       context: .
       dockerfile: Dockerfile
@@ -27,18 +27,15 @@ services:
       VPN_TUN_REGEX: ${VPN_TUN_REGEX:-^(tun|tap|ppp|hsc|sc)[0-9_-]*$}
       VPN_PROBE_HOST: ${VPN_PROBE_HOST:-}
       SOCKS_ALLOWED_CIDRS: ${SOCKS_ALLOWED_CIDRS:-192.168.0.0/16}
-      ENABLE_IPV6: ${ENABLE_IPV6:-false}
       HILLSTONE_SERVICE_COMMAND: ${HILLSTONE_SERVICE_COMMAND:-/opt/apps/hillstonesecureconnect/files/bin/HillstoneSecureConnectService}
       HILLSTONE_GUI_COMMAND: ${HILLSTONE_GUI_COMMAND:-/opt/apps/hillstonesecureconnect/files/bin/HillstoneSecureConnect.sh}
       HILLSTONE_AUTO_MINIMIZE: ${HILLSTONE_AUTO_MINIMIZE:-false}
     ports:
       - "${NOVNC_HTTP_BIND_IP:-127.0.0.1}:${NOVNC_HTTP_PORT:-6080}:6080/tcp"
-      - "${NOVNC_HTTPS_BIND_IP:-127.0.0.1}:${NOVNC_HTTPS_PORT:-8443}:8443/tcp"
       - "${SOCKS_BIND_IP:-127.0.0.1}:${SOCKS_PORT:-1080}:1080/tcp"
     volumes:
       - ./data/hillstone-config:/home/desktop/.config/HillstoneSecureConnect
       - ./data/hillstone-data:/home/desktop/.local/share/HillstoneSecureConnect
-      - ./certs:/certs:ro
     tmpfs:
       - /run
       - /tmp
