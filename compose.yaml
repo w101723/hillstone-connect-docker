@@ -1,9 +1,6 @@
 services:
   hillstone-vpn:
     image: ${HILLSTONE_IMAGE:-ghcr.io/w101723/hillstone-connect:latest}
-    build:
-      context: .
-      dockerfile: Dockerfile
     container_name: ${HILLSTONE_CONTAINER_NAME:-hillstone-vpn}
     restart: unless-stopped
     cap_drop:
