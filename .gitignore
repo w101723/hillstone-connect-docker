@@ -1,0 +1,11 @@
+.env
+.DS_Store
+hillstone-remote-*.png
+certs/*
+!certs/README.md
+data/
+*.log
+vendor/*
+!vendor/README.md
+!vendor/hillstonesecureconnect_5.5.0.12175_amd64.deb
+!vendor/hillstonesecureconnect_5.5.0.12186_arm64.deb

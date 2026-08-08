@@ -1,0 +1,28 @@
+server {
+    listen 8443 ssl;
+    server_name _;
+
+    ssl_certificate /certs/tls.crt;
+    ssl_certificate_key /certs/tls.key;
+    ssl_protocols TLSv1.2 TLSv1.3;
+
+    auth_basic "Hillstone VPN Desktop";
+    auth_basic_user_file /certs/htpasswd;
+
+    location = /healthz {
+        auth_basic off;
+        access_log off;
+        return 200 "ok\n";
+        add_header Content-Type text/plain;
+    }
+
+    location / {
+        proxy_pass http://127.0.0.1:6080;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+        proxy_set_header Host $host;
+        proxy_read_timeout 3600s;
+        proxy_send_timeout 3600s;
+    }
+}
