@@ -293,7 +293,59 @@ docker run --rm --platform linux/amd64 \
   '
 ```
 
-## 6. 启动和 Web 登录
+## 6. GitHub Actions 多架构镜像
+
+仓库包含 `.github/workflows/build-image.yml`。提交到 `main`、推送 `v*` 标签或手动运行工作流时，会使用 QEMU 和 Docker Buildx 构建：
+
+```text
+linux/amd64
+linux/arm64
+```
+
+非 Pull Request 构建会使用 GitHub 自动提供的 `GITHUB_TOKEN` 登录 GitHub Container Registry，不需要额外配置 Docker Hub 密码。镜像地址为：
+
+```text
+ghcr.io/w101723/hillstone-connect-docker
+```
+
+`main` 分支会发布以下标签：
+
+```text
+ghcr.io/w101723/hillstone-connect-docker:latest
+ghcr.io/w101723/hillstone-connect-docker:main
+ghcr.io/w101723/hillstone-connect-docker:sha-<commit>
+```
+
+推送版本标签，例如：
+
+```bash
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+还会发布：
+
+```text
+ghcr.io/w101723/hillstone-connect-docker:v1.0.0
+ghcr.io/w101723/hillstone-connect-docker:sha-<commit>
+```
+
+Pull Request 只执行多架构构建验证，不推送镜像。工作流同时生成 OCI provenance 和 SBOM，并使用 GitHub Actions cache 加速后续构建。
+
+首次成功推送后，如果 GHCR package 默认为私有，可以在 GitHub 仓库或 package 设置中将其改为公开。私有镜像需要先登录：
+
+```bash
+echo "$GITHUB_TOKEN" | docker login ghcr.io -u w101723 --password-stdin
+docker pull ghcr.io/w101723/hillstone-connect-docker:latest
+```
+
+公开后可以直接拉取：
+
+```bash
+docker pull ghcr.io/w101723/hillstone-connect-docker:latest
+```
+
+## 7. 启动和 Web 登录
 
 启动：
 
@@ -315,7 +367,7 @@ https://<NOVNC_HTTPS_BIND_IP>:<NOVNC_HTTPS_PORT>/vnc.html?autoconnect=1&resize=s
 
 打开页面后应自动连接 VNC，并显示 `Hillstone Secure Connect` 主窗口。用户在 GUI 中填写网关、账号、密码及 MFA 信息。
 
-## 7. 运行状态检查
+## 8. 运行状态检查
 
 ### 7.1 Compose 和健康状态
 
@@ -393,7 +445,7 @@ docker compose exec hillstone-vpn nft list table inet hillstone_guard
 
 未连接 VPN 时，`socksproxy` 用户只允许 loopback 和已建立连接，其余出站被拒绝。
 
-## 8. SOCKS5 使用和验证
+## 9. SOCKS5 使用和验证
 
 VPN 成功连接并检测到接口后，Dante 才会监听：
 
@@ -428,7 +480,7 @@ curl --max-time 5 \
   https://example.com
 ```
 
-## 9. 断线防泄漏测试
+## 10. 断线防泄漏测试
 
 建议完整执行以下测试：
 
@@ -443,7 +495,7 @@ curl --max-time 5 \
 9. 确认代理目标流量没有从 `eth0` 泄漏；
 10. 重新连接 VPN，确认接口重新发现、规则重新开放且 SOCKS 恢复。
 
-## 10. amd64 远程部署实测记录
+## 11. amd64 远程部署实测记录
 
 以下测试于 2026-08-07 在原生 x86_64 Docker 主机 `10.193.2.8` 完成。
 
@@ -556,7 +608,7 @@ ssh root@10.193.2.8 '
 '
 ```
 
-## 11. 健康检查说明
+## 12. 健康检查说明
 
 镜像健康检查会验证：
 
@@ -569,7 +621,7 @@ ssh root@10.193.2.8 '
 
 健康状态只说明容器控制面和 Hillstone GUI/Service 可用，不代表用户已经成功登录 VPN。VPN 和 SOCKS 状态必须单独检查。
 
-## 12. 限制
+## 13. 限制
 
 - 本项目提供应用层 TCP SOCKS5 代理，不是透明三层路由器；
 - SOCKS 不支持 UDP ASSOCIATE、ICMP 和任意非 TCP 协议；
