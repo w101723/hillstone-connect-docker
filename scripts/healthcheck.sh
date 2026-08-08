@@ -5,7 +5,8 @@ set -euo pipefail
 for chain in INPUT FORWARD OUTPUT; do
   iptables -S "$chain" | grep -qx -- "-P $chain ACCEPT"
 done
-iptables -t nat -C POSTROUTING -j MASQUERADE
+iptables -t nat -C POSTROUTING -m addrtype ! --src-type LOCAL -j MASQUERADE
+! iptables -t nat -C POSTROUTING -j MASQUERADE 2>/dev/null
 
 curl -fsS http://127.0.0.1:6080/vnc.html >/dev/null
 

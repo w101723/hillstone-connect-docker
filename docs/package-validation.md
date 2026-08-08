@@ -33,7 +33,7 @@ The packages declare no Debian runtime dependencies. The image therefore install
 - arm64 archive SHA-256: `f674c8f4a033dc1dfd4f0d5e9602fbe5b0d0f81307bf3794f44b5b5d6d622eae`.
 - GOST runs as root (the container default user) and listens continuously on TCP port 1080.
 - GOST has no owner-based or VPN-interface firewall restriction. Its outbound connections follow the container routing table before, during and after VPN connectivity.
-- Compose enables `net.ipv4.ip_forward=1`. Container startup sets the INPUT, FORWARD and OUTPUT policies to `ACCEPT` and idempotently installs the broad `iptables -t nat -A POSTROUTING -j MASQUERADE` rule for routed IPv4 traffic.
-- Forwarded/NAT traffic is separate from GOST's locally generated OUTPUT traffic. Split-tunnel and full-tunnel behavior must be determined from the routes installed by Hillstone.
+- Compose enables `net.ipv4.ip_forward=1`. Container startup sets the INPUT, FORWARD and OUTPUT policies to `ACCEPT` and idempotently installs `iptables -t nat -A POSTROUTING -m addrtype ! --src-type LOCAL -j MASQUERADE` for routed IPv4 traffic.
+- Local OUTPUT packets also traverse POSTROUTING. Excluding source addresses local to the container prevents the gateway NAT rule from rewriting Hillstone and GOST traffic while retaining source NAT for downstream forwarded traffic.
 
 Full release validation still requires running the final image with `/dev/net/tun`, `NET_ADMIN`, `NET_RAW`, and the IPv4 forwarding sysctl, completing login on each native architecture, and verifying tunnel routes, DNS, pre-VPN and post-VPN GOST egress, downstream forwarding/NAT and performance.

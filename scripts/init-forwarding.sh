@@ -12,8 +12,12 @@ iptables -P INPUT ACCEPT
 iptables -P FORWARD ACCEPT
 iptables -P OUTPUT ACCEPT
 
-if ! iptables -t nat -C POSTROUTING -j MASQUERADE 2>/dev/null; then
-  iptables -t nat -A POSTROUTING -j MASQUERADE
+while iptables -t nat -C POSTROUTING -j MASQUERADE 2>/dev/null; do
+  iptables -t nat -D POSTROUTING -j MASQUERADE
+done
+
+if ! iptables -t nat -C POSTROUTING -m addrtype ! --src-type LOCAL -j MASQUERADE 2>/dev/null; then
+  iptables -t nat -A POSTROUTING -m addrtype ! --src-type LOCAL -j MASQUERADE
 fi
 
-iptables -t nat -C POSTROUTING -j MASQUERADE
+iptables -t nat -C POSTROUTING -m addrtype ! --src-type LOCAL -j MASQUERADE

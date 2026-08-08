@@ -212,12 +212,12 @@ sysctl -w net.ipv4.ip_forward=1
 iptables -P INPUT ACCEPT
 iptables -P FORWARD ACCEPT
 iptables -P OUTPUT ACCEPT
-iptables -t nat -A POSTROUTING -j MASQUERADE
+iptables -t nat -A POSTROUTING -m addrtype ! --src-type LOCAL -j MASQUERADE
 ```
 
-因此，连接到容器网络并将默认路由指向该容器的下游设备或容器，可以使用它转发 IPv4 流量。无条件 `MASQUERADE` 会对容器转发的所有 IPv4 出站流量进行源地址伪装，实际出口由容器当前路由表决定。
+因此，连接到容器网络并将默认路由指向该容器的下游设备或容器，可以使用它转发 IPv4 流量。MASQUERADE 仅匹配源地址不是容器本机地址的流量，从而伪装下游转发流量，同时避免改写 Hillstone 和 GOST 自身产生的流量。实际出口由容器当前路由表决定。
 
-通用转发/NAT 与 GOST SOCKS5 相互独立：MASQUERADE 作用于经容器转发的流量；GOST 发起的是本机 `OUTPUT` 流量，直接按照容器路由表选路。容器不再创建 GOST 专用防火墙链，也不会将 SOCKS5 端口变成透明代理。
+本机生成的数据包同样会经过 `POSTROUTING`，因此不能使用无条件的 `-j MASQUERADE`；否则可能改写 VPN 隧道或代理进程的本机流量，干扰服务端回程。GOST 发起的是本机 `OUTPUT` 流量，直接按照容器路由表选路，并被 `--src-type LOCAL` 排除在该 NAT 规则之外。容器不创建 GOST 专用防火墙链，也不会将 SOCKS5 端口变成透明代理。
 
 ## 查看运行状态
 
@@ -277,6 +277,14 @@ docker compose exec hillstone-vpn iptables -L FORWARD -n -v
 docker compose exec hillstone-vpn iptables -t nat -S POSTROUTING
 docker compose exec hillstone-vpn iptables -t nat -L POSTROUTING -n -v
 ```
+
+正常规则应包含：
+
+```iptables
+-A POSTROUTING -m addrtype ! --src-type LOCAL -j MASQUERADE
+```
+
+下游转发测试时，`FORWARD` 和该 MASQUERADE 规则的计数器应同时增加；Hillstone 或 GOST 本机流量不应命中该规则。
 
 ### GUI 窗口
 
@@ -354,5 +362,5 @@ docker compose up -d
 - 妥善保护 `AppConfig.ini`；
 - 不要将 `.env` 或 `data/` 提交到 Git；
 - 容器内不提供 SOCKS5 的 VPN kill switch 或出站接口限制，VPN 断开后代理会继续服从普通路由；
-- 默认的无条件 MASQUERADE 会伪装所有经容器转发的 IPv4 出站流量，应只把受信网络接入该网关；
+- 默认的 MASQUERADE 会伪装源地址不是容器本机地址的 IPv4 转发流量，应只把受信网络接入该网关；
 - SOCKS5 只提供 TCP CONNECT，不支持 UDP ASSOCIATE、ICMP 或透明三层路由。
