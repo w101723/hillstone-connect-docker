@@ -30,6 +30,7 @@ services:
       ENABLE_IPV6: ${ENABLE_IPV6:-false}
       HILLSTONE_SERVICE_COMMAND: ${HILLSTONE_SERVICE_COMMAND:-/opt/apps/hillstonesecureconnect/files/bin/HillstoneSecureConnectService}
       HILLSTONE_GUI_COMMAND: ${HILLSTONE_GUI_COMMAND:-/opt/apps/hillstonesecureconnect/files/bin/HillstoneSecureConnect.sh}
+      HILLSTONE_AUTO_MINIMIZE: ${HILLSTONE_AUTO_MINIMIZE:-false}
     ports:
       - "${NOVNC_HTTP_BIND_IP:-127.0.0.1}:${NOVNC_HTTP_PORT:-6080}:6080/tcp"
       - "${NOVNC_HTTPS_BIND_IP:-127.0.0.1}:${NOVNC_HTTPS_PORT:-8443}:8443/tcp"

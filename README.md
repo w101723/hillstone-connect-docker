@@ -179,7 +179,10 @@ SOCKS_ALLOWED_CIDRS=192.168.1.0/24
 VPN_DOCKER_SUBNET=172.30.50.0/24
 VPN_CONTAINER_IP=172.30.50.2
 VPN_TUN_REGEX=^(tun|tap|ppp|hsc|sc)[0-9_-]*$
+HILLSTONE_AUTO_MINIMIZE=false
 ```
+
+`HILLSTONE_AUTO_MINIMIZE=false` 会在 GUI 启动前将 `AppConfig.ini` 中的 `AutoMinimize` 固定为 `false`，避免 VPN 连接成功后厂商客户端自动隐藏主窗口。在 noVNC/flwm 会话中没有常规桌面托盘，自动隐藏后只能通过手动点击窗口区域或重新启动 GUI 找回，因此本项目默认禁用该行为。若希望恢复厂商默认的连接后最小化行为，可将其设为 `true`。
 
 如果有一个只有 VPN 连接后才可访问的企业 IP，建议配置：
 

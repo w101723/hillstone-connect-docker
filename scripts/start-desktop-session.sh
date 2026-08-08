@@ -24,6 +24,28 @@ export LANG=${LANG:-zh_CN.UTF-8}
 export LANGUAGE=${LANGUAGE:-zh_CN:zh}
 export LC_ALL=${LC_ALL:-zh_CN.UTF-8}
 
+hillstone_config_dir=${HOME}/.config/HillstoneSecureConnect
+hillstone_config=${hillstone_config_dir}/AppConfig.ini
+auto_minimize=${HILLSTONE_AUTO_MINIMIZE:-false}
+
+if [[ "$auto_minimize" != "true" && "$auto_minimize" != "false" ]]; then
+  echo "Invalid HILLSTONE_AUTO_MINIMIZE: $auto_minimize" >&2
+  exit 1
+fi
+
+install -d "$hillstone_config_dir"
+if [[ -f "$hillstone_config" ]]; then
+  if grep -q '^AutoMinimize=' "$hillstone_config"; then
+    sed -i "s/^AutoMinimize=.*/AutoMinimize=${auto_minimize}/" "$hillstone_config"
+  elif grep -q '^\[General\]$' "$hillstone_config"; then
+    sed -i "/^\[General\]$/a AutoMinimize=${auto_minimize}" "$hillstone_config"
+  else
+    printf '\n[General]\nAutoMinimize=%s\n' "$auto_minimize" >>"$hillstone_config"
+  fi
+else
+  printf '[General]\nAutoMinimize=%s\n' "$auto_minimize" >"$hillstone_config"
+fi
+
 gui_command=${HILLSTONE_GUI_COMMAND:-${HILLSTONE_HOME}/bin/HillstoneSecureConnect.sh}
 echo "Starting Hillstone GUI: $gui_command"
 bash -lc "$gui_command" &
